@@ -7,6 +7,7 @@ buildscript {
 plugins {
     kotlin("jvm") version "2.3.21"
     kotlin("plugin.spring") version "2.3.21"
+    id("com.diffplug.spotless") version "7.2.1"
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.flywaydb.flyway") version "13.4.0"
@@ -66,7 +67,6 @@ jooq {
         }
         generator {
             database {
-                name = "org.jooq.meta.postgres.PostgresDatabase"
                 inputSchema = "public"
                 includes = ".*"
             }
@@ -77,7 +77,33 @@ jooq {
     }
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir("build/generated-sources/jooq")
+        }
+    }
+}
+
+tasks.named<org.jooq.codegen.gradle.CodegenTask>("jooqCodegen") {
+    dependsOn("flywayMigrate")
+}
+
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileKotlin") {
+    dependsOn("jooqCodegen")
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.5.0")
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint("1.5.0")
+    }
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }
-
