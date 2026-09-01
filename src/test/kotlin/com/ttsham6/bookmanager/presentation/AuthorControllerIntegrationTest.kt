@@ -82,6 +82,20 @@ class AuthorControllerIntegrationTest
             assertThat(persistedAuthor.birthDate).isEqualTo(LocalDate.of(1862, 2, 19))
         }
 
+        @Test
+        fun `存在しない著者へのPUTは404を返す`() {
+            val response =
+                put(
+                    path = "/authors/10",
+                    name = "Akutagawa Ryunosuke",
+                    birthDate = LocalDate.of(1892, 3, 1),
+                )
+
+            assertThat(response.statusCode()).isEqualTo(HttpStatus.NOT_FOUND.value())
+            assertThat(response.body()).contains("Author 10 was not found")
+            assertThat(dslContext.selectCount().from(AUTHORS).fetchSingle(0, Int::class.java)).isEqualTo(0)
+        }
+
         private fun post(
             path: String,
             name: String,

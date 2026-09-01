@@ -1,6 +1,7 @@
 package com.ttsham6.bookmanager.infrastructure
 
 import com.ttsham6.bookmanager.domain.Author
+import com.ttsham6.bookmanager.domain.AuthorNotFoundException
 import com.ttsham6.bookmanager.domain.AuthorRepository
 import com.ttsham6.bookmanager.jooq.Tables.AUTHORS
 import com.ttsham6.bookmanager.jooq.tables.records.AuthorsRecord
@@ -25,24 +26,20 @@ class AuthorRepositoryImpl(
             .fetchOne(::toAuthor)
             ?: error("Failed to insert author")
 
-    override fun upsert(
+    override fun update(
         authorId: Long,
         name: String,
         birthDate: LocalDate,
     ): Author =
         dslContext
-            .insertInto(AUTHORS)
-            .set(AUTHORS.ID, authorId)
-            .set(AUTHORS.NAME, name)
-            .set(AUTHORS.BIRTH_DATE, birthDate)
-            .onConflict(AUTHORS.ID)
-            .doUpdate()
+            .update(AUTHORS)
             .set(AUTHORS.NAME, name)
             .set(AUTHORS.BIRTH_DATE, birthDate)
             .set(AUTHORS.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(AUTHORS.ID.eq(authorId))
             .returning()
             .fetchOne(::toAuthor)
-            ?: error("Failed to upsert author")
+            ?: throw AuthorNotFoundException(authorId)
 
     private fun toAuthor(record: AuthorsRecord): Author =
         Author(

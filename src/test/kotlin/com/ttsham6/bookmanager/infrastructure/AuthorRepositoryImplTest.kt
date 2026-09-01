@@ -1,5 +1,6 @@
 package com.ttsham6.bookmanager.infrastructure
 
+import com.ttsham6.bookmanager.domain.AuthorNotFoundException
 import com.ttsham6.bookmanager.domain.AuthorRepository
 import com.ttsham6.bookmanager.jooq.Tables.AUTHORS
 import com.ttsham6.bookmanager.support.PostgresContainerTestBase
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import java.time.LocalDate
+import kotlin.test.assertFailsWith
 
 @SpringBootTest
 class AuthorRepositoryImplTest
@@ -47,21 +49,16 @@ class AuthorRepositoryImplTest
         }
 
         @Test
-        fun `存在しない著者IDを指定した場合は著者を作成する`() {
+        fun `存在しない著者IDを指定した場合は例外を投げる`() {
             val birthDate = LocalDate.of(1892, 3, 1)
 
-            val author = authorRepository.upsert(10, "Akutagawa Ryunosuke", birthDate)
+            val exception =
+                assertFailsWith<AuthorNotFoundException> {
+                    authorRepository.update(10, "Akutagawa Ryunosuke", birthDate)
+                }
 
-            assertThat(author.id).isEqualTo(10)
-            assertThat(author.name).isEqualTo("Akutagawa Ryunosuke")
-            assertThat(author.birthDate).isEqualTo(birthDate)
-            assertThat(author.createdAt).isNotNull()
-            assertThat(author.updatedAt).isNotNull()
-
-            val persistedAuthor = dslContext.selectFrom(AUTHORS).fetchSingle()
-            assertThat(persistedAuthor.id).isEqualTo(author.id)
-            assertThat(persistedAuthor.name).isEqualTo(author.name)
-            assertThat(persistedAuthor.birthDate).isEqualTo(author.birthDate)
+            assertThat(exception.message).isEqualTo("Author 10 was not found")
+            assertThat(dslContext.selectCount().from(AUTHORS).fetchSingle(0, Int::class.java)).isEqualTo(0)
         }
 
         @Test
@@ -74,7 +71,7 @@ class AuthorRepositoryImplTest
             val updatedBirthDate = LocalDate.of(1862, 2, 19)
 
             val updatedAuthor =
-                authorRepository.upsert(
+                authorRepository.update(
                     authorId = author.id,
                     name = "Mori Rintaro",
                     birthDate = updatedBirthDate,

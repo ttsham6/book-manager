@@ -29,16 +29,16 @@ class AuthorServiceTest {
     }
 
     @Test
-    fun `更新リクエストが正しい場合はリポジトリにupsertを委譲する`() {
+    fun `更新リクエストが正しい場合はリポジトリに更新を委譲する`() {
         val birthDate = LocalDate.of(1892, 3, 1)
 
-        val author = authorService.upsert(10, "Akutagawa Ryunosuke", birthDate)
+        val author = authorService.update(10, "Akutagawa Ryunosuke", birthDate)
 
         assertThat(author.id).isEqualTo(10)
         assertThat(author.name).isEqualTo("Akutagawa Ryunosuke")
         assertThat(author.birthDate).isEqualTo(birthDate)
-        assertThat(authorRepository.upsertedRequest).isEqualTo(
-            UpsertAuthorRequest(
+        assertThat(authorRepository.updatedRequest).isEqualTo(
+            UpdateAuthorRequest(
                 authorId = 10,
                 name = "Akutagawa Ryunosuke",
                 birthDate = birthDate,
@@ -73,7 +73,7 @@ private class RecordingAuthorRepository : AuthorRepository {
     var createdRequest: AuthorRequest? = null
         private set
 
-    var upsertedRequest: UpsertAuthorRequest? = null
+    var updatedRequest: UpdateAuthorRequest? = null
         private set
 
     override fun create(
@@ -88,12 +88,12 @@ private class RecordingAuthorRepository : AuthorRepository {
         )
     }
 
-    override fun upsert(
+    override fun update(
         authorId: Long,
         name: String,
         birthDate: LocalDate,
     ): Author {
-        upsertedRequest = UpsertAuthorRequest(authorId, name, birthDate)
+        updatedRequest = UpdateAuthorRequest(authorId, name, birthDate)
         return author(
             id = authorId,
             name = name,
@@ -120,7 +120,7 @@ private data class AuthorRequest(
     val birthDate: LocalDate,
 )
 
-private data class UpsertAuthorRequest(
+private data class UpdateAuthorRequest(
     val authorId: Long,
     val name: String,
     val birthDate: LocalDate,

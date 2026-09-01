@@ -20,17 +20,17 @@ class AuthorController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
-        @RequestBody request: UpsertAuthorRequest,
+        @RequestBody request: AuthorRequest,
     ): AuthorResponse = authorService.create(request.name, request.birthDate).toResponse()
 
     @PutMapping("/{authorId}")
-    fun upsert(
+    fun update(
         @PathVariable authorId: Long,
-        @RequestBody request: UpsertAuthorRequest,
-    ): AuthorResponse = authorService.upsert(authorId, request.name, request.birthDate).toResponse()
+        @RequestBody request: AuthorRequest,
+    ): AuthorResponse = authorService.update(authorId, request.name, request.birthDate).toResponse()
 }
 
-data class UpsertAuthorRequest(
+data class AuthorRequest(
     val name: String,
     val birthDate: LocalDate,
 )
