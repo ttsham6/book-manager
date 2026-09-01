@@ -28,22 +28,22 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-flyway")
-    implementation("org.springframework.boot:spring-boot-starter-jooq")
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.flywaydb:flyway-database-postgresql")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
+    implementation("org.springframework.boot:spring-boot-starter-flyway:4.1.1")
+    implementation("org.springframework.boot:spring-boot-starter-jooq:4.1.1")
+    implementation("org.springframework.boot:spring-boot-starter-web:4.1.1")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.21.5")
+    implementation("org.flywaydb:flyway-database-postgresql:12.4.0")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.3.21")
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose:4.1.1")
     runtimeOnly("org.postgresql:postgresql:42.7.13")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-jooq-test")
-    testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
-    testImplementation("org.testcontainers:testcontainers-postgresql")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-starter-flyway-test:4.1.1")
+    testImplementation("org.springframework.boot:spring-boot-starter-jooq-test:4.1.1")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers:4.1.1")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.3.21")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
+    testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.0.3")
 
     jooqCodegen("org.postgresql:postgresql:42.7.13")
 }
