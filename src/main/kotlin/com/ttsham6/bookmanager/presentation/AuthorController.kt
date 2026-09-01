@@ -21,13 +21,19 @@ class AuthorController(
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
         @RequestBody request: AuthorRequest,
-    ): AuthorResponse = authorService.create(request.name, request.birthDate).toResponse()
+    ): AuthorResponse {
+        val author = authorService.create(request.name, request.birthDate)
+        return AuthorResponse.from(author)
+    }
 
     @PutMapping("/{authorId}")
     fun update(
         @PathVariable authorId: Long,
         @RequestBody request: AuthorRequest,
-    ): AuthorResponse = authorService.update(authorId, request.name, request.birthDate).toResponse()
+    ): AuthorResponse {
+        val author = authorService.update(authorId, request.name, request.birthDate)
+        return AuthorResponse.from(author)
+    }
 }
 
 data class AuthorRequest(
@@ -49,5 +55,3 @@ data class AuthorResponse(
             )
     }
 }
-
-private fun Author.toResponse(): AuthorResponse = AuthorResponse.from(this)

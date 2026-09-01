@@ -40,6 +40,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-flyway-test:4.1.1")
     testImplementation("org.springframework.boot:spring-boot-starter-jooq-test:4.1.1")
     testImplementation("org.springframework.boot:spring-boot-testcontainers:4.1.1")
+    testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.3.21")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
