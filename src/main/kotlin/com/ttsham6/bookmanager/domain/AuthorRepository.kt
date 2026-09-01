@@ -8,7 +8,7 @@ interface AuthorRepository {
         birthDate: LocalDate,
     ): Author
 
-    fun upsert(
+    fun update(
         authorId: Long,
         name: String,
         birthDate: LocalDate,

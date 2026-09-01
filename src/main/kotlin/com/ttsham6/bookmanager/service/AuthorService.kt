@@ -17,13 +17,13 @@ class AuthorService(
         return authorRepository.create(name, birthDate)
     }
 
-    fun upsert(
+    fun update(
         authorId: Long,
         name: String,
         birthDate: LocalDate,
     ): Author {
         validate(name, birthDate)
-        return authorRepository.upsert(authorId, name, birthDate)
+        return authorRepository.update(authorId, name, birthDate)
     }
 
     private fun validate(
