@@ -66,6 +66,39 @@ class BookRepositoryImplTest
         }
 
         @Test
+        fun `著者名の部分一致大文字小文字無視で書籍を検索できる`() {
+            val authorIds = createAuthors()
+            val book =
+                bookRepository.create(
+                    title = "Kokoro",
+                    price = 1200,
+                    authorIds = authorIds,
+                    publicationStatus = PublicationStatus.PUBLISHED,
+                )
+            bookRepository.create(
+                title = "Sanshiro",
+                price = 1000,
+                authorIds = listOf(authorIds.first()),
+                publicationStatus = PublicationStatus.UNPUBLISHED,
+            )
+
+            val books = bookRepository.findByAuthorName("SOSe")
+
+            assertThat(books.map { it.id }).containsExactly(book.id, book.id + 1)
+            assertThat(books.map { it.title }).containsExactly("Kokoro", "Sanshiro")
+            assertThat(books.first().authors.map { it.id }).containsExactly(1, 2)
+        }
+
+        @Test
+        fun `著者名に一致する書籍がない場合は空リストを返す`() {
+            createAuthors()
+
+            val books = bookRepository.findByAuthorName("Akutagawa")
+
+            assertThat(books).isEmpty()
+        }
+
+        @Test
         fun `存在しない著者IDを含む場合は例外を投げて書籍を作成しない`() {
             createAuthors()
 

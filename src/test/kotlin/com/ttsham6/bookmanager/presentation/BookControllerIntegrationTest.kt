@@ -71,6 +71,30 @@ class BookControllerIntegrationTest
         }
 
         @Test
+        fun `GET booksで著者名の部分一致大文字小文字無視検索ができる`() {
+            createAuthors()
+            createBook(title = "Kokoro", publicationStatus = "PUBLISHED")
+            createBook(title = "Sanshiro", publicationStatus = "UNPUBLISHED")
+
+            val response = get("/books?authorName=SOSe")
+
+            assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value())
+            assertThat(response.body()).contains("\"title\":\"Kokoro\"")
+            assertThat(response.body()).contains("\"title\":\"Sanshiro\"")
+            assertThat(response.body()).contains("\"name\":\"Natsume Soseki\"")
+            assertThat(response.body()).contains("\"publicationStatus\":\"PUBLISHED\"")
+            assertThat(response.body()).contains("\"publicationStatus\":\"UNPUBLISHED\"")
+        }
+
+        @Test
+        fun `GET booksで著者名が空白の場合は400を返す`() {
+            val response = get("/books?authorName=%20")
+
+            assertThat(response.statusCode()).isEqualTo(HttpStatus.BAD_REQUEST.value())
+            assertThat(response.body()).contains("authorName must not be blank")
+        }
+
+        @Test
         fun `タイトルが空白の場合は400を返す`() {
             createAuthors()
 
@@ -193,17 +217,37 @@ class BookControllerIntegrationTest
         }
 
         private fun createBook(publicationStatus: String = "UNPUBLISHED") {
-            dslContext
-                .insertInto(BOOKS)
-                .set(BOOKS.TITLE, "Before")
-                .set(BOOKS.PRICE, 1000)
-                .set(BOOKS.PUBLICATION_STATUS, publicationStatus)
-                .execute()
+            createBook(title = "Before", publicationStatus = publicationStatus)
+        }
+
+        private fun createBook(
+            title: String,
+            publicationStatus: String = "UNPUBLISHED",
+        ) {
+            val book =
+                dslContext
+                    .insertInto(BOOKS)
+                    .set(BOOKS.TITLE, title)
+                    .set(BOOKS.PRICE, 1000)
+                    .set(BOOKS.PUBLICATION_STATUS, publicationStatus)
+                    .returning()
+                    .fetchOne()
+                    ?: error("Failed to insert book")
             dslContext
                 .insertInto(BOOK_AUTHORS)
-                .set(BOOK_AUTHORS.BOOK_ID, 1)
+                .set(BOOK_AUTHORS.BOOK_ID, book.id)
                 .set(BOOK_AUTHORS.AUTHOR_ID, 1)
                 .execute()
+        }
+
+        private fun get(path: String): HttpResponse<String> {
+            val request =
+                HttpRequest
+                    .newBuilder(URI.create("http://localhost:$port$path"))
+                    .GET()
+                    .build()
+
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }
 
         private fun post(

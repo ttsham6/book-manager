@@ -30,6 +30,21 @@ class BookRepositoryImpl(
         return toBook(bookRecord, findAuthorsByBookId(dslContext, bookId))
     }
 
+    override fun findByAuthorName(authorName: String): List<Book> =
+        dslContext
+            .selectDistinct(BOOKS.fields().toList())
+            .from(BOOKS)
+            .join(BOOK_AUTHORS)
+            .on(BOOK_AUTHORS.BOOK_ID.eq(BOOKS.ID))
+            .join(AUTHORS)
+            .on(AUTHORS.ID.eq(BOOK_AUTHORS.AUTHOR_ID))
+            .where(AUTHORS.NAME.containsIgnoreCase(authorName))
+            .orderBy(BOOKS.ID.asc())
+            .fetchInto(BOOKS)
+            .map { bookRecord ->
+                toBook(bookRecord, findAuthorsByBookId(dslContext, bookRecord.id))
+            }
+
     override fun create(
         title: String,
         price: Long,

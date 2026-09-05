@@ -107,6 +107,34 @@ curl -i -X POST http://localhost:8080/books \
 }
 ```
 
+### 著者名で書籍検索
+
+`authorName` には著者名の一部を指定できます。検索は部分一致かつ大文字小文字を区別しません。
+
+```bash
+curl -i 'http://localhost:8080/books?authorName=sose'
+```
+
+レスポンス例:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Kokoro",
+    "price": 1200,
+    "publicationStatus": "PUBLISHED",
+    "authors": [
+      {
+        "id": 1,
+        "name": "Natsume Soseki",
+        "birthDate": "1867-02-09"
+      }
+    ]
+  }
+]
+```
+
 ### 書籍更新
 
 `PUT /books/{bookId}` は既存書籍の更新のみを行います。存在しない書籍 ID を指定しても新規作成はされず、

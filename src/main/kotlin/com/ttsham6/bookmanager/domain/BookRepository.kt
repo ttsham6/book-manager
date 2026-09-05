@@ -3,6 +3,8 @@ package com.ttsham6.bookmanager.domain
 interface BookRepository {
     fun findById(bookId: Long): Book?
 
+    fun findByAuthorName(authorName: String): List<Book>
+
     fun create(
         title: String,
         price: Long,

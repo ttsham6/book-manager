@@ -10,6 +10,11 @@ import org.springframework.stereotype.Service
 class BookService(
     private val bookRepository: BookRepository,
 ) {
+    fun searchByAuthorName(authorName: String): List<Book> {
+        require(authorName.isNotBlank()) { "authorName must not be blank" }
+        return bookRepository.findByAuthorName(authorName)
+    }
+
     fun create(
         title: String,
         price: Long,
