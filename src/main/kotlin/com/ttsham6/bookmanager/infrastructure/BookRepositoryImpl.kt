@@ -1,0 +1,160 @@
+package com.ttsham6.bookmanager.infrastructure
+
+import com.ttsham6.bookmanager.domain.Author
+import com.ttsham6.bookmanager.domain.AuthorNotFoundException
+import com.ttsham6.bookmanager.domain.Book
+import com.ttsham6.bookmanager.domain.BookNotFoundException
+import com.ttsham6.bookmanager.domain.BookRepository
+import com.ttsham6.bookmanager.domain.PublicationStatus
+import com.ttsham6.bookmanager.jooq.Tables.AUTHORS
+import com.ttsham6.bookmanager.jooq.Tables.BOOKS
+import com.ttsham6.bookmanager.jooq.Tables.BOOK_AUTHORS
+import com.ttsham6.bookmanager.jooq.tables.records.AuthorsRecord
+import com.ttsham6.bookmanager.jooq.tables.records.BooksRecord
+import org.jooq.DSLContext
+import org.jooq.impl.DSL
+import org.springframework.stereotype.Repository
+
+@Repository
+class BookRepositoryImpl(
+    private val dslContext: DSLContext,
+) : BookRepository {
+    override fun findById(bookId: Long): Book? {
+        val bookRecord =
+            dslContext
+                .selectFrom(BOOKS)
+                .where(BOOKS.ID.eq(bookId))
+                .fetchOne()
+                ?: return null
+
+        return toBook(bookRecord, findAuthorsByBookId(dslContext, bookId))
+    }
+
+    override fun create(
+        title: String,
+        price: Long,
+        authorIds: List<Long>,
+        publicationStatus: PublicationStatus,
+    ): Book {
+        val authors = findAuthorsOrThrow(authorIds)
+        return dslContext.transactionResult { configuration ->
+            val tx = DSL.using(configuration)
+            val bookRecord =
+                tx
+                    .insertInto(BOOKS)
+                    .set(BOOKS.TITLE, title)
+                    .set(BOOKS.PRICE, price)
+                    .set(BOOKS.PUBLICATION_STATUS, publicationStatus.name)
+                    .returning()
+                    .fetchOne()
+                    ?: error("Failed to insert book")
+
+            authorIds.forEach { authorId ->
+                tx
+                    .insertInto(BOOK_AUTHORS)
+                    .set(BOOK_AUTHORS.BOOK_ID, bookRecord.id)
+                    .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                    .execute()
+            }
+
+            toBook(bookRecord, authors)
+        }
+    }
+
+    override fun update(
+        bookId: Long,
+        title: String,
+        price: Long,
+        authorIds: List<Long>,
+        publicationStatus: PublicationStatus,
+    ): Book {
+        val authors = findAuthorsOrThrow(authorIds)
+        return dslContext.transactionResult { configuration ->
+            val tx = DSL.using(configuration)
+            val bookRecord =
+                tx
+                    .update(BOOKS)
+                    .set(BOOKS.TITLE, title)
+                    .set(BOOKS.PRICE, price)
+                    .set(BOOKS.PUBLICATION_STATUS, publicationStatus.name)
+                    .set(BOOKS.UPDATED_AT, DSL.currentOffsetDateTime())
+                    .where(BOOKS.ID.eq(bookId))
+                    .returning()
+                    .fetchOne()
+                    ?: throw BookNotFoundException(bookId)
+
+            tx
+                .deleteFrom(BOOK_AUTHORS)
+                .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
+                .execute()
+
+            authorIds.forEach { authorId ->
+                tx
+                    .insertInto(BOOK_AUTHORS)
+                    .set(BOOK_AUTHORS.BOOK_ID, bookId)
+                    .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                    .execute()
+            }
+
+            toBook(bookRecord, authors)
+        }
+    }
+
+    private fun findAuthorsOrThrow(authorIds: List<Long>): List<Author> {
+        val authors = findAuthors(dslContext, authorIds)
+        val missingAuthorIds = authorIds.toSet() - authors.map { it.id }.toSet()
+        if (missingAuthorIds.isNotEmpty()) {
+            throw AuthorNotFoundException(missingAuthorIds.sorted())
+        }
+        return authors
+    }
+
+    private fun findAuthors(
+        dslContext: DSLContext,
+        authorIds: List<Long>,
+    ): List<Author> =
+        dslContext
+            .selectFrom(AUTHORS)
+            .where(AUTHORS.ID.`in`(authorIds))
+            .orderBy(AUTHORS.ID.asc())
+            .fetch(::toAuthor)
+
+    private fun findAuthorsByBookId(
+        dslContext: DSLContext,
+        bookId: Long,
+    ): List<Author> =
+        dslContext
+            .selectFrom(AUTHORS)
+            .where(
+                AUTHORS.ID.`in`(
+                    dslContext
+                        .select(BOOK_AUTHORS.AUTHOR_ID)
+                        .from(BOOK_AUTHORS)
+                        .where(BOOK_AUTHORS.BOOK_ID.eq(bookId)),
+                ),
+            ).orderBy(AUTHORS.ID.asc())
+            .fetch(::toAuthor)
+
+    private fun toBook(
+        record: BooksRecord,
+        authors: List<Author>,
+    ): Book =
+        Book(
+            id = record.id,
+            title = record.title,
+            price = record.price,
+            authors = authors,
+            publicationStatus = PublicationStatus.valueOf(record.publicationStatus),
+            createdAt = record.createdAt,
+            updatedAt = record.updatedAt,
+        )
+
+    private fun toAuthor(record: AuthorsRecord): Author =
+        Author(
+            id = record.id,
+            name = record.name,
+            birthDate = record.birthDate,
+            createdAt = record.createdAt,
+            updatedAt = record.updatedAt,
+        )
+}
