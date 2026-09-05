@@ -5,6 +5,7 @@ import com.ttsham6.bookmanager.domain.BookNotFoundException
 import com.ttsham6.bookmanager.domain.BookRepository
 import com.ttsham6.bookmanager.domain.PublicationStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class BookService(
@@ -25,6 +26,7 @@ class BookService(
         return bookRepository.create(title, price, authorIds, publicationStatus)
     }
 
+    @Transactional
     fun update(
         bookId: Long,
         title: String,
@@ -33,14 +35,23 @@ class BookService(
         publicationStatus: PublicationStatus,
     ): Book {
         validate(title, price, authorIds)
-        val currentBook = bookRepository.findById(bookId) ?: throw BookNotFoundException(bookId)
+
+        val currentBook = bookRepository.findByIdForUpdate(bookId) ?: throw BookNotFoundException(bookId)
+        requireCanUpdate(currentBook.publicationStatus, publicationStatus)
+
+        return bookRepository.update(bookId, title, price, authorIds, publicationStatus)
+    }
+
+    private fun requireCanUpdate(
+        currentPublicationStatus: PublicationStatus,
+        nextPublicationStatus: PublicationStatus,
+    ) {
         require(
-            currentBook.publicationStatus != PublicationStatus.PUBLISHED ||
-                publicationStatus != PublicationStatus.UNPUBLISHED,
+            currentPublicationStatus != PublicationStatus.PUBLISHED ||
+                nextPublicationStatus != PublicationStatus.UNPUBLISHED,
         ) {
             "published book cannot be changed to unpublished"
         }
-        return bookRepository.update(bookId, title, price, authorIds, publicationStatus)
     }
 
     private fun validate(

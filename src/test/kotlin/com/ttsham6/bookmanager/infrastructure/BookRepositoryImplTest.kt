@@ -177,6 +177,26 @@ class BookRepositoryImplTest
             assertThat(dslContext.selectCount().from(BOOK_AUTHORS).fetchSingle(0, Int::class.java)).isEqualTo(0)
         }
 
+        @Test
+        fun `存在しない書籍IDと著者IDを指定した場合は書籍が存在しない例外を投げる`() {
+            createAuthors()
+
+            val exception =
+                assertFailsWith<BookNotFoundException> {
+                    bookRepository.update(
+                        bookId = 99,
+                        title = "Kokoro",
+                        price = 1200,
+                        authorIds = listOf(999),
+                        publicationStatus = PublicationStatus.UNPUBLISHED,
+                    )
+                }
+
+            assertThat(exception.message).isEqualTo("Book 99 was not found")
+            assertThat(dslContext.selectCount().from(BOOKS).fetchSingle(0, Int::class.java)).isEqualTo(0)
+            assertThat(dslContext.selectCount().from(BOOK_AUTHORS).fetchSingle(0, Int::class.java)).isEqualTo(0)
+        }
+
         private fun createAuthors(): List<Long> {
             val author1 =
                 dslContext
