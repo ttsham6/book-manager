@@ -19,6 +19,36 @@ class BookServiceTest {
     private val bookService = BookService(bookRepository)
 
     @Test
+    fun `著者名検索はリポジトリに委譲する`() {
+        every { bookRepository.findByAuthorName("soseki") } returns
+            listOf(
+                book(
+                    id = 1,
+                    title = "Kokoro",
+                    price = 1200,
+                    publicationStatus = PublicationStatus.PUBLISHED,
+                ),
+            )
+
+        val books = bookService.searchByAuthorName("soseki")
+
+        assertThat(books).hasSize(1)
+        assertThat(books.first().title).isEqualTo("Kokoro")
+        verify { bookRepository.findByAuthorName("soseki") }
+    }
+
+    @Test
+    fun `著者名検索で著者名が空白の場合は検索できない`() {
+        val exception =
+            assertFailsWith<IllegalArgumentException> {
+                bookService.searchByAuthorName(" ")
+            }
+
+        assertThat(exception.message).isEqualTo("authorName must not be blank")
+        verify { bookRepository wasNot Called }
+    }
+
+    @Test
     fun `作成リクエストが正しい場合はリポジトリに作成を委譲する`() {
         val authorIds = listOf(1L, 2L)
         every {

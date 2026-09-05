@@ -5,11 +5,13 @@ import com.ttsham6.bookmanager.domain.Book
 import com.ttsham6.bookmanager.domain.PublicationStatus
 import com.ttsham6.bookmanager.service.BookService
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
@@ -19,6 +21,14 @@ import java.time.LocalDate
 class BookController(
     private val bookService: BookService,
 ) {
+    @GetMapping
+    fun search(
+        @RequestParam authorName: String,
+    ): List<BookResponse> =
+        bookService
+            .searchByAuthorName(authorName)
+            .map(BookResponse::from)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
