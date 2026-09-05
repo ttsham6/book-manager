@@ -80,7 +80,7 @@ class BookServiceTest {
     @Test
     fun `更新リクエストが正しい場合はリポジトリに更新を委譲する`() {
         val authorIds = listOf(1L, 2L)
-        every { bookRepository.findById(1) } returns
+        every { bookRepository.findByIdForUpdate(1) } returns
             book(
                 id = 1,
                 title = "Before",
@@ -103,13 +103,13 @@ class BookServiceTest {
         assertThat(book.title).isEqualTo("Kokoro")
         assertThat(book.price).isEqualTo(1200)
         assertThat(book.publicationStatus).isEqualTo(PublicationStatus.PUBLISHED)
-        verify { bookRepository.findById(1) }
+        verify { bookRepository.findByIdForUpdate(1) }
         verify { bookRepository.update(1, "Kokoro", 1200, authorIds, PublicationStatus.PUBLISHED) }
     }
 
     @Test
     fun `出版済みの書籍は未出版に更新できない`() {
-        every { bookRepository.findById(1) } returns
+        every { bookRepository.findByIdForUpdate(1) } returns
             book(
                 id = 1,
                 title = "Kokoro",
@@ -123,7 +123,7 @@ class BookServiceTest {
             }
 
         assertThat(exception.message).isEqualTo("published book cannot be changed to unpublished")
-        verify { bookRepository.findById(1) }
+        verify { bookRepository.findByIdForUpdate(1) }
         verify(exactly = 0) {
             bookRepository.update(any(), any(), any(), any(), any())
         }

@@ -19,16 +19,15 @@ import org.springframework.stereotype.Repository
 class BookRepositoryImpl(
     private val dslContext: DSLContext,
 ) : BookRepository {
-    override fun findById(bookId: Long): Book? {
-        val bookRecord =
-            dslContext
-                .selectFrom(BOOKS)
-                .where(BOOKS.ID.eq(bookId))
-                .fetchOne()
-                ?: return null
-
-        return toBook(bookRecord, findAuthorsByBookId(dslContext, bookId))
-    }
+    override fun findByIdForUpdate(bookId: Long): Book? =
+        dslContext
+            .selectFrom(BOOKS)
+            .where(BOOKS.ID.eq(bookId))
+            .forUpdate()
+            .fetchOne()
+            ?.let { bookRecord ->
+                toBook(bookRecord, findAuthorsByBookId(dslContext, bookId))
+            }
 
     override fun findByAuthorName(authorName: String): List<Book> =
         dslContext
@@ -50,10 +49,10 @@ class BookRepositoryImpl(
         price: Long,
         authorIds: List<Long>,
         publicationStatus: PublicationStatus,
-    ): Book {
-        val authors = findAuthorsOrThrow(authorIds)
-        return dslContext.transactionResult { configuration ->
+    ): Book =
+        dslContext.transactionResult { configuration ->
             val tx = DSL.using(configuration)
+            val authors = findAuthorsOrThrow(tx, authorIds)
             val bookRecord =
                 tx
                     .insertInto(BOOKS)
@@ -64,17 +63,16 @@ class BookRepositoryImpl(
                     .fetchOne()
                     ?: error("Failed to insert book")
 
-            authorIds.forEach { authorId ->
+            authors.forEach { author ->
                 tx
                     .insertInto(BOOK_AUTHORS)
                     .set(BOOK_AUTHORS.BOOK_ID, bookRecord.id)
-                    .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                    .set(BOOK_AUTHORS.AUTHOR_ID, author.id)
                     .execute()
             }
 
             toBook(bookRecord, authors)
         }
-    }
 
     override fun update(
         bookId: Long,
@@ -82,40 +80,51 @@ class BookRepositoryImpl(
         price: Long,
         authorIds: List<Long>,
         publicationStatus: PublicationStatus,
-    ): Book {
-        val authors = findAuthorsOrThrow(authorIds)
-        return dslContext.transactionResult { configuration ->
+    ): Book =
+        dslContext.transactionResult { configuration ->
             val tx = DSL.using(configuration)
-            val bookRecord =
-                tx
-                    .update(BOOKS)
-                    .set(BOOKS.TITLE, title)
-                    .set(BOOKS.PRICE, price)
-                    .set(BOOKS.PUBLICATION_STATUS, publicationStatus.name)
-                    .set(BOOKS.UPDATED_AT, DSL.currentOffsetDateTime())
-                    .where(BOOKS.ID.eq(bookId))
-                    .returning()
-                    .fetchOne()
-                    ?: throw BookNotFoundException(bookId)
+
+            val bookRecord = updateBook(tx, bookId, title, price, publicationStatus)
+            val authors = findAuthorsOrThrow(tx, authorIds)
 
             tx
                 .deleteFrom(BOOK_AUTHORS)
                 .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
                 .execute()
 
-            authorIds.forEach { authorId ->
+            authors.forEach { author ->
                 tx
                     .insertInto(BOOK_AUTHORS)
                     .set(BOOK_AUTHORS.BOOK_ID, bookId)
-                    .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                    .set(BOOK_AUTHORS.AUTHOR_ID, author.id)
                     .execute()
             }
 
             toBook(bookRecord, authors)
         }
-    }
 
-    private fun findAuthorsOrThrow(authorIds: List<Long>): List<Author> {
+    private fun updateBook(
+        dslContext: DSLContext,
+        bookId: Long,
+        title: String,
+        price: Long,
+        publicationStatus: PublicationStatus,
+    ): BooksRecord =
+        dslContext
+            .update(BOOKS)
+            .set(BOOKS.TITLE, title)
+            .set(BOOKS.PRICE, price)
+            .set(BOOKS.PUBLICATION_STATUS, publicationStatus.name)
+            .set(BOOKS.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(BOOKS.ID.eq(bookId))
+            .returning()
+            .fetchOne()
+            ?: throw BookNotFoundException(bookId)
+
+    private fun findAuthorsOrThrow(
+        dslContext: DSLContext,
+        authorIds: List<Long>,
+    ): List<Author> {
         val authors = findAuthors(dslContext, authorIds)
         val missingAuthorIds = authorIds.toSet() - authors.map { it.id }.toSet()
         if (missingAuthorIds.isNotEmpty()) {
