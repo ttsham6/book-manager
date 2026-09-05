@@ -31,17 +31,30 @@ class BookRepositoryImpl(
 
     override fun findByAuthorName(authorName: String): List<Book> =
         dslContext
-            .selectDistinct(BOOKS.fields().toList())
+            .select(BOOKS.fields().toList() + AUTHORS.fields().toList())
             .from(BOOKS)
             .join(BOOK_AUTHORS)
             .on(BOOK_AUTHORS.BOOK_ID.eq(BOOKS.ID))
             .join(AUTHORS)
             .on(AUTHORS.ID.eq(BOOK_AUTHORS.AUTHOR_ID))
-            .where(AUTHORS.NAME.containsIgnoreCase(authorName))
-            .orderBy(BOOKS.ID.asc())
-            .fetchInto(BOOKS)
-            .map { bookRecord ->
-                toBook(bookRecord, findAuthorsByBookId(dslContext, bookRecord.id))
+            .where(
+                BOOKS.ID.`in`(
+                    dslContext
+                        .selectDistinct(BOOK_AUTHORS.BOOK_ID)
+                        .from(BOOK_AUTHORS)
+                        .join(AUTHORS)
+                        .on(AUTHORS.ID.eq(BOOK_AUTHORS.AUTHOR_ID))
+                        .where(AUTHORS.NAME.containsIgnoreCase(authorName)),
+                ),
+            ).orderBy(BOOKS.ID.asc(), AUTHORS.ID.asc())
+            .fetch()
+            .groupBy { it.get(BOOKS.ID) }
+            .values
+            .map { records ->
+                toBook(
+                    record = records.first().into(BOOKS),
+                    authors = records.map { toAuthor(it.into(AUTHORS)) },
+                )
             }
 
     override fun create(

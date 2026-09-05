@@ -87,6 +87,7 @@ class BookRepositoryImplTest
             assertThat(books.map { it.id }).containsExactly(book.id, book.id + 1)
             assertThat(books.map { it.title }).containsExactly("Kokoro", "Sanshiro")
             assertThat(books.first().authors.map { it.id }).containsExactly(1, 2)
+            assertThat(books.last().authors.map { it.id }).containsExactly(1)
         }
 
         @Test
