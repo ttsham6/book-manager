@@ -9,7 +9,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 abstract class PostgresContainerTestBase {
     companion object {
         private val postgres =
-            PostgreSQLContainer("postgres:17-alpine")
+            PostgreSQLContainer("postgres:17.11-alpine3.23")
                 .also { it.start() }
 
         @JvmStatic
